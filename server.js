@@ -1,6 +1,8 @@
 const express = require('express')
 // const mongoose = require('mongoose')
 const bodyParser = require('body-parser')
+const axios = require('axios');
+require('dotenv').config();
 
 const app = express()
 const t = 10000;
@@ -11,6 +13,60 @@ app.use(bodyParser.json())
 app.use(express.static('public'))
 app.get('/', (req, res) => {
   res.sendFile(__dirname + '/views/index.html')
+});
+
+// const url = "https://jsonplaceholder.typicode.com/posts/1";
+// https.get(url, res => {
+//   res.setEncoding("utf8");
+//   let body = "";
+//   res.on("data", data => {
+//     body += data;
+//   });
+//   res.on("end", () => {
+//     body = JSON.parse(body);
+//     console.log(body);
+//   });
+// });
+
+/**
+ * Search Eventful's API for events.
+ * @see https://api.eventful.com/docs/events/search
+ *
+ */
+app.get('/eventful', function(req, res, next) {
+    const maturity = 'all';
+    const page_size = 10;
+    const location = 'seattle';
+
+    let url = 'https://api.eventful.com/json/events/search?app_key=' +
+        process.env.EVENTFUL_KEY + `&location=${location}` +
+        `&page_size=${page_size}` + `&mature=${maturity}`;
+
+    axios.get(url)
+      .then(response => {
+        const parsed_events = response.data['events']['event'].map(x => {
+            return {  // todo: save additional details?
+                title: x['title'],
+                description: x['description'],
+                url: x['url'],
+                start_time: x['start_time'],
+                identifier: x['id'],
+                venue_name: x['venue_name'],
+                venue_url: x['venue_url'],
+                venue_address: x['venue_address'],
+                venue_identiier: x['venue_id'],
+                city: x['city_name'],
+                zipcode: x['postal_code'],
+                state: x['region_abbr'],
+                region: x['region_name'],
+                iso3: x['country_abbr'],
+            }
+        });
+        res.send(parsed_events);
+      })
+      .catch(error => {
+        console.log(error);
+      });
 });
 
 // Not found middleware
